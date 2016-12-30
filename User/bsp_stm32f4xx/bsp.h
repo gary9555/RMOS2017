@@ -77,6 +77,7 @@
 void bsp_Init(void);
 void bsp_Idle(void);
 void BSP_Tick_Init(void);
+void bsp_DelayUS(uint32_t _ulDelayTime);
 
 #endif
 

@@ -397,3 +397,55 @@ void bsp_Idle(void)
 	/* 对于 uIP 协议实现，可以插入uip轮询函数 */
 }
 
+/*
+*********************************************************************************************************
+*    name: bsp_DelayUS()
+*    function: CPU internal counter,32bit 
+*                OSSchedLock(&err);
+*                bsp_DelayUS(5);
+*                OSSchedUnlock(&err); ??????????????????????
+*    parameter: _ulDelayTime  delay length 1 us
+*    retval: void
+*    specification: 1. when main freq = 168MHz,32bit counter at most 2^32/168000000 = 25.565sec
+*                
+*             2. ?????????,????????????????0.25us??????
+*             ????????:
+*             (1). MDK5.15,optimize level 0, independent of different MDK optimization level 
+*             (2). STM32F407IGT6
+*             (3). test method:
+*                 GPIOI->BSRRL = GPIO_Pin_8;
+*                 bsp_DelayUS(10);
+*                 GPIOI->BSRRH = GPIO_Pin_8;
+*             -------------------------------------------
+*                test                 actual time lapse
+*             bsp_DelayUS(1)          1.2360us
+*             bsp_DelayUS(2)          2.256us
+*             bsp_DelayUS(3)          3.256us
+*             bsp_DelayUS(4)          4.256us
+*             bsp_DelayUS(5)          5.276us
+*             bsp_DelayUS(6)          6.276us
+*             bsp_DelayUS(7)          7.276us
+*             bsp_DelayUS(8)          8.276us
+*             bsp_DelayUS(9)          9.276us
+*             bsp_DelayUS(10)         10.28us
+*            3. 2 32-bit unsigned number deduction, the result assigned to 32-bit can still 
+								render the correct difference
+*              if A,B,C are all 32-bit unsigned numbers
+*              if A > B  then A - B = C,
+*              if A < B  then A - B = C, C shall have the value of 
+*						   0xFFFFFFFF - B + A + 1. 这点要注意，正好用于本函数
+*********************************************************************************************************
+*/
+void bsp_DelayUS(uint32_t _ulDelayTime){
+    uint32_t tCnt, tDelayCnt;
+    uint32_t tStart;
+
+    tStart = (uint32_t)CPU_TS_TmrRd();                       /* tick value while entering */
+    tCnt = 0;
+    tDelayCnt = _ulDelayTime * (SystemCoreClock / 1000000);     /* ticks needed */               
+
+    while(tCnt < tDelayCnt)
+    {
+        tCnt = (uint32_t)CPU_TS_TmrRd() - tStart; /* ?????,???????32????????,???????? */    
+    }
+}
